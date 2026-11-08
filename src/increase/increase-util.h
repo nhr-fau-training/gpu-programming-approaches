@@ -3,12 +3,6 @@
 #include "../util.h"
 
 
-inline void initIncrease(double *data, size_t nx) {
-    for (size_t i0 = 0; i0 < nx; ++i0) {
-        data[i0] = (double)i0;
-    }
-}
-
 inline void checkSolutionIncrease(double *data, size_t nx, size_t nIt) {
     for (size_t i0 = 0; i0 < nx; ++i0) {
         if ((double)(i0 + nIt) != data[i0]) {

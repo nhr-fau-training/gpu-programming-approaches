@@ -79,6 +79,12 @@ void printStats(const std::chrono::duration<double> elapsedSeconds, size_t nIt, 
     std::cout << "  compute:       " << 1e-9 * numFlopsPerCell * nCells * nIt / elapsedSeconds.count() << " GFLOP/s\n";
 }
 
+void printTotalStats(const std::chrono::duration<double> elapsedSecondsGlobal, const std::chrono::duration<double> elapsedSecondsWork) {
+    const auto overhead = elapsedSecondsGlobal - elapsedSecondsWork;
+    std::cout << "  total time:    " << 1e3 * elapsedSecondsGlobal.count() << " ms\n";
+    std::cout << "  overhead:      " << 1e3 * overhead.count() << " ms (" << 100 * (overhead / elapsedSecondsGlobal) << " % of total)\n";
+}
+
 FCT_DECORATOR size_t ceilingDivide(size_t a, size_t b) {
     return (a + b - 1) / b;
 }
