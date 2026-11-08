@@ -22,7 +22,8 @@ int main(int argc, char *argv[]) {
     // init
     initIncrease(data, nx);
 
-    checkCudaError(cudaMemPrefetchAsync(data, sizeof(double) * nx, 0));
+    cudaMemLocation deviceLocation{cudaMemLocationTypeDevice, 0};
+    checkCudaError(cudaMemPrefetchAsync(data, sizeof(double) * nx, deviceLocation, 0));
 
     // warm-up
     for (size_t i = 0; i < nItWarmUp; ++i) {
@@ -42,7 +43,8 @@ int main(int argc, char *argv[]) {
 
     printStats(end - start, nIt, nx, sizeof(double) + sizeof(double), 1);
 
-    checkCudaError(cudaMemPrefetchAsync(data, sizeof(double) * nx, cudaCpuDeviceId));
+    cudaMemLocation hostLocation{cudaMemLocationTypeHost, 0};
+    checkCudaError(cudaMemPrefetchAsync(data, sizeof(double) * nx, hostLocation, 0));
 
     // check solution
     checkSolutionIncrease(data, nx, nIt + nItWarmUp);

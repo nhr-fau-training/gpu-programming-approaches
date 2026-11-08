@@ -27,9 +27,10 @@ int main(int argc, char *argv[]) {
     // init
     initMatrixAdd(a, b, c, nx, ny);
 
-    checkCudaError(cudaMemPrefetchAsync(a, sizeof(double) * nx * ny, 0));
-    checkCudaError(cudaMemPrefetchAsync(b, sizeof(double) * nx * ny, 0));
-    checkCudaError(cudaMemPrefetchAsync(c, sizeof(double) * nx * ny, 0));
+    cudaMemLocation deviceLocation{cudaMemLocationTypeDevice, 0};
+    checkCudaError(cudaMemPrefetchAsync(a, sizeof(double) * nx * ny, deviceLocation, 0));
+    checkCudaError(cudaMemPrefetchAsync(b, sizeof(double) * nx * ny, deviceLocation, 0));
+    checkCudaError(cudaMemPrefetchAsync(c, sizeof(double) * nx * ny, deviceLocation, 0));
 
     // warm-up
     for (size_t i = 0; i < nItWarmUp; ++i) {
@@ -51,9 +52,10 @@ int main(int argc, char *argv[]) {
 
     printStats(end - start, nIt, nx * ny, sizeof(double) + sizeof(double) + sizeof(double), 1);
 
-    checkCudaError(cudaMemPrefetchAsync(a, sizeof(double) * nx * ny, cudaCpuDeviceId));
-    checkCudaError(cudaMemPrefetchAsync(b, sizeof(double) * nx * ny, cudaCpuDeviceId));
-    checkCudaError(cudaMemPrefetchAsync(c, sizeof(double) * nx * ny, cudaCpuDeviceId));
+    cudaMemLocation hostLocation{cudaMemLocationTypeHost, 0};
+    checkCudaError(cudaMemPrefetchAsync(a, sizeof(double) * nx * ny, hostLocation, 0));
+    checkCudaError(cudaMemPrefetchAsync(b, sizeof(double) * nx * ny, hostLocation, 0));
+    checkCudaError(cudaMemPrefetchAsync(c, sizeof(double) * nx * ny, hostLocation, 0));
 
     // check solution
     checkSolutionMatrixAdd(a, b, c, nx, ny, nIt + nItWarmUp);
