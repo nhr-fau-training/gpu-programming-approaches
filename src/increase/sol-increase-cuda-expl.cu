@@ -3,6 +3,14 @@
 #include "../cuda-util.h"
 
 
+// old: initialization on the host
+// inline void init(double *data, size_t nx) {
+//     for (size_t i0 = 0; i0 < nx; ++i0) {
+//         data[i0] = (double)i0;
+//     }
+// }
+
+// new: initialization on the GPU
 __global__ void init(double *data, size_t nx) {
     const size_t i0 = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -34,6 +42,12 @@ int main(int argc, char *argv[]) {
     checkCudaError(cudaMalloc((void **)&d_data, sizeof(double) * nx));
 
     // init
+    // old: initialization on the host, then transfer to the GPU
+    // init(data, nx);
+    //
+    // checkCudaError(cudaMemcpy(d_data, data, sizeof(double) * nx, cudaMemcpyHostToDevice));
+
+    // new: initialization on the GPU, no transfer needed
     init<<<ceilingDivide(nx, 256), 256>>>(d_data, nx);
 
     // warm-up

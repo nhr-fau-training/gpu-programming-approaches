@@ -4,6 +4,14 @@
 #include "increase-util.h"
 
 
+// old: initialization on the host
+// inline void init(double *data, size_t nx) {
+//     for (size_t i0 = 0; i0 < nx; ++i0) {
+//         data[i0] = (double)i0;
+//     }
+// }
+
+// new: initialization on the GPU
 inline void init(double *data, size_t nx) {
     std::for_each(std::execution::par_unseq, data, data + nx,
                   [=](auto &data_item) {
@@ -13,24 +21,10 @@ inline void init(double *data, size_t nx) {
 
 
 inline void increase(double *data, size_t nx) {
-    // version 1: std::transform
     std::transform(std::execution::par_unseq, data, data + nx, data,
                [=](auto data_item) {
                    return data_item + 1;
                });
-
-    // // version 2: std::for_each with index reconstruction
-    // std::for_each(std::execution::par_unseq, data, data + nx,
-    //               [=](const auto& data_item) {
-    //                   const size_t i0 = &data_item - data;
-    //                   data[i0] += 1;
-    //               });
-
-    // // version 3: std::for_each with counting iterator
-    // std::for_each(std::execution::par_unseq, thrust::make_counting_iterator<size_t>(0), thrust::make_counting_iterator<size_t>(nx),
-    //               [=](const auto &i0) {
-    //                   data[i0] += 1;
-    //               });
 }
 
 int main(int argc, char *argv[]) {

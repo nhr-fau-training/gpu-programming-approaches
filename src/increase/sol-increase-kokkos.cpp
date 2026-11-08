@@ -3,6 +3,14 @@
 #include "increase-util.h"
 
 
+// old: initialization on the host
+// inline void init(Kokkos::View<double *>::host_mirror_type &data, size_t nx) {
+//     for (size_t i0 = 0; i0 < nx; ++i0) {
+//         data(i0) = (double)i0;
+//     }
+// }
+
+// new: initialization on the GPU
 inline void init(Kokkos::View<double *> &data, size_t nx) {
     Kokkos::parallel_for(
         Kokkos::RangePolicy<>(0, nx),
@@ -37,6 +45,12 @@ int main(int argc, char *argv[]) {
         auto h_data = Kokkos::create_mirror_view(data);
 
         // init
+        // old: initialization on the host, then transfer to the GPU
+        // init(h_data, nx);
+        //
+        // Kokkos::deep_copy(data, h_data);
+
+        // new: initialization on the GPU, no transfer needed
         init(data, nx);
 
         // warm-up

@@ -16,26 +16,20 @@
 #include "increase-util.h"
 
 
+// old: initialization on the host
+// inline void init(thrust::host_vector<double> &data, size_t nx) {
+//     for (size_t i0 = 0; i0 < nx; ++i0) {
+//         data[i0] = (double)i0;
+//     }
+// }
+
+// new: initialization on the GPU
 inline void init(thrust::device_vector<double> &data, size_t nx) {
     thrust::sequence(thrust::device, data.begin(), data.end());
 }
 
 
 inline void increase(thrust::device_vector<double> &data, size_t nx) {
-    // // version 1: thrust transform
-    // thrust::transform(thrust::device, data.begin(), data.end(), data.begin(),
-    //                   [=] __host__ __device__ (double data_elem) {
-    //                       return data_elem + 1;
-    //                   });
-
-    // // version 2: thrust for_each + counting iterator
-    // double *data_ptr = thrust::raw_pointer_cast(data.data());
-    // thrust::for_each(thrust::device, thrust::make_counting_iterator<size_t>(0), thrust::make_counting_iterator<size_t>(nx),
-    //                  [=] __host__ __device__ (size_t i0) {
-    //                      data_ptr[i0] += 1;
-    //                  });
-
-    // version 3: thrust tabulate
     double *data_ptr = thrust::raw_pointer_cast(data.data());
     thrust::tabulate(thrust::device, data.begin(), data.end(),
                      [=] __host__ __device__ (size_t i0) {
@@ -53,6 +47,12 @@ int main(int argc, char *argv[]) {
     thrust::device_vector<double> d_data(nx);
 
     // init
+    // old: initialization on the host, then transfer to the GPU
+    // init(data, nx);
+    //
+    // thrust::copy(data.begin(), data.end(), d_data.begin());
+
+    // new: initialization on the GPU, no transfer needed
     init(d_data, nx);
 
     // warm-up

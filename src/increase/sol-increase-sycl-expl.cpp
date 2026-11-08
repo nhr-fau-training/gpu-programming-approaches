@@ -3,6 +3,14 @@
 #include "../sycl-util.h"
 
 
+// old: initialization on the host
+// inline void init(double *data, size_t nx) {
+//     for (size_t i0 = 0; i0 < nx; ++i0) {
+//         data[i0] = (double)i0;
+//     }
+// }
+
+// new: initialization on the GPU
 inline void init(sycl::queue &q, double *data, size_t nx) {
     q.submit([&](sycl::handler &h) {
         h.parallel_for(nx, [=](auto i0) {
@@ -38,6 +46,13 @@ int main(int argc, char *argv[]) {
     d_data = sycl::malloc_device<double>(nx, q);
 
     // init
+    // old: initialization on the host, then transfer to the GPU
+    // init(data, nx);
+    //
+    // q.memcpy(d_data, data, sizeof(double) * nx);
+    // q.wait();
+
+    // new: initialization on the GPU, no transfer needed
     init(q, d_data, nx);
 
     // warm-up

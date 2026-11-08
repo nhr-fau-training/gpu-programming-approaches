@@ -1,6 +1,14 @@
 #include "increase-util.h"
 
 
+// old: initialization on the host
+// inline void init(double *data, size_t nx) {
+//     for (size_t i0 = 0; i0 < nx; ++i0) {
+//         data[i0] = (double)i0;
+//     }
+// }
+
+// new: initialization on the GPU
 inline void init(double *data, size_t nx) {
 #pragma omp target teams distribute parallel for
     for (size_t i0 = 0; i0 < nx; ++i0) {
@@ -26,10 +34,14 @@ int main(int argc, char *argv[]) {
     double *data;
     data = new double[nx];
 
+    // new: device allocation without transfer, before the initialization on the GPU
 #pragma omp target enter data map(alloc : data[0 : nx])
 
     // init
     init(data, nx);
+
+    // old: device allocation and transfer to the GPU, after the initialization on the host
+    // #pragma omp target enter data map(to : data[0 : nx])
 
     // warm-up
     for (size_t i = 0; i < nItWarmUp; ++i) {
