@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <execution>
+#include <ranges>
 
 #include "increase-util.h"
 
@@ -13,9 +14,10 @@
 
 // new: initialization on the GPU
 inline void init(double *data, size_t nx) {
-    std::for_each(std::execution::par_unseq, data, data + nx,
-                  [=](auto &data_item) {
-                      data_item = (double)(&data_item - data);
+    auto indices = std::views::iota(size_t{0}, nx);
+    std::for_each(std::execution::par_unseq, indices.begin(), indices.end(),
+                  [=](size_t i0) {
+                      data[i0] = (double)i0;
                   });
 }
 
