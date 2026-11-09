@@ -1,0 +1,164 @@
+#include <algorithm>
+#include <execution>
+#include <numeric>
+
+#include "cg-util.h"
+
+
+// all loops run over the full grid and use the address of the current element to recover its indices (i, j);
+// boundary elements are skipped
+//
+// dot products use std::transform_reduce over the full arrays: res, p and ap are zero on the boundary,
+// so the boundary elements do not contribute (the address trick does not work here, since transform_reduce
+// may pass copies of the elements to the transformation)
+
+
+inline size_t conjugateGradient(const double *const __restrict__ rhs, double *__restrict__ u, double *__restrict__ res,
+                                double *__restrict__ p, double *__restrict__ ap,
+                                const size_t nx, const size_t ny, const size_t maxIt) {
+    // initialization
+    double initResSq = 0;
+
+    // compute initial residual
+    std::for_each(std::execution::par_unseq, res, res + nx * ny, //
+                  [=](const double &res_item) {                 //
+                      const size_t idx = &res_item - res;
+                      const size_t i = idx % nx;
+                      const size_t j = idx / nx;
+                      if (i >= 1 && i < nx - 1 && j >= 1 && j < ny - 1) {
+                          res[j * nx + i] = rhs[j * nx + i] - (4 * u[j * nx + i] - (u[j * nx + i - 1] + u[j * nx + i + 1] + u[(j - 1) * nx + i] + u[(j + 1) * nx + i]));
+                      }
+                  });
+
+    // compute residual norm
+    initResSq = std::transform_reduce(std::execution::par_unseq, res, res + nx * ny, res, 0.);
+
+    // init p
+    std::for_each(std::execution::par_unseq, p, p + nx * ny, //
+                  [=](const double &p_item) {               //
+                      const size_t idx = &p_item - p;
+                      const size_t i = idx % nx;
+                      const size_t j = idx / nx;
+                      if (i >= 1 && i < nx - 1 && j >= 1 && j < ny - 1) {
+                          p[j * nx + i] = res[j * nx + i];
+                      }
+                  });
+
+    double curResSq = initResSq;
+
+    // main loop
+    for (size_t it = 0; it < maxIt; ++it) {
+        // compute A * p
+        std::for_each(std::execution::par_unseq, ap, ap + nx * ny, //
+                      [=](const double &ap_item) {                //
+                          const size_t idx = &ap_item - ap;
+                          const size_t i = idx % nx;
+                          const size_t j = idx / nx;
+                          if (i >= 1 && i < nx - 1 && j >= 1 && j < ny - 1) {
+                              ap[j * nx + i] = 4 * p[j * nx + i] - (p[j * nx + i - 1] + p[j * nx + i + 1] + p[(j - 1) * nx + i] + p[(j + 1) * nx + i]);
+                          }
+                      });
+        double alphaNominator = curResSq;
+        double alphaDenominator = std::transform_reduce(std::execution::par_unseq, p, p + nx * ny, ap, 0.);
+        double alpha = alphaNominator / alphaDenominator;
+
+        // update solution
+        std::for_each(std::execution::par_unseq, u, u + nx * ny, //
+                      [=](const double &u_item) {               //
+                          const size_t idx = &u_item - u;
+                          const size_t i = idx % nx;
+                          const size_t j = idx / nx;
+                          if (i >= 1 && i < nx - 1 && j >= 1 && j < ny - 1) {
+                              u[j * nx + i] += alpha * p[j * nx + i];
+                          }
+                      });
+
+        // update residual
+        std::for_each(std::execution::par_unseq, res, res + nx * ny, //
+                      [=](const double &res_item) {                 //
+                          const size_t idx = &res_item - res;
+                          const size_t i = idx % nx;
+                          const size_t j = idx / nx;
+                          if (i >= 1 && i < nx - 1 && j >= 1 && j < ny - 1) {
+                              res[j * nx + i] -= alpha * ap[j * nx + i];
+                          }
+                      });
+
+        // compute residual norm
+        double nextResSq = std::transform_reduce(std::execution::par_unseq, res, res + nx * ny, res, 0.);
+
+        // check exit criterion
+        if (sqrt(nextResSq) <= 1e-12)
+            return it;
+
+        // if (0 == it % 100)
+        //     std::cout << "    " << it << " : " << sqrt(nextResSq) << std::endl;
+
+        // compute beta
+        double beta = nextResSq / curResSq;
+        curResSq = nextResSq;
+
+        // update p
+        std::for_each(std::execution::par_unseq, p, p + nx * ny, //
+                      [=](const double &p_item) {               //
+                          const size_t idx = &p_item - p;
+                          const size_t i = idx % nx;
+                          const size_t j = idx / nx;
+                          if (i >= 1 && i < nx - 1 && j >= 1 && j < ny - 1) {
+                              p[j * nx + i] = res[j * nx + i] + beta * p[j * nx + i];
+                          }
+                      });
+    }
+
+    return maxIt;
+}
+
+
+int main(int argc, char *argv[]) {
+    size_t nx, ny, nItWarmUp, nIt;
+    parseCLA_2d(argc, argv, nx, ny, nItWarmUp, nIt);
+
+    double *u;
+    u = new double[nx * ny];
+    double *rhs;
+    rhs = new double[nx * ny];
+
+    double *res;
+    res = new double[nx * ny];
+    double *p;
+    p = new double[nx * ny];
+    double *ap;
+    ap = new double[nx * ny];
+
+    // init
+    initConjugateGradient(u, rhs, nx, ny);
+
+    memset(res, 0, nx * ny * sizeof(double));
+    memset(p, 0, nx * ny * sizeof(double));
+    memset(ap, 0, nx * ny * sizeof(double));
+
+    // warm-up
+    nItWarmUp = conjugateGradient(rhs, u, res, p, ap, nx, ny, nItWarmUp);
+
+    // measurement
+    auto start = std::chrono::steady_clock::now();
+
+    nIt = conjugateGradient(rhs, u, res, p, ap, nx, ny, nIt);
+    std::cout << "  CG steps:      " << nIt << std::endl;
+
+    auto end = std::chrono::steady_clock::now();
+
+    printStats(end - start, nIt, nx * ny, 8 * sizeof(double), 15);
+
+    // check solution
+    checkSolutionConjugateGradient(u, rhs, nx, ny);
+
+    delete[] u;
+    delete[] rhs;
+
+    delete[] res;
+    delete[] p;
+    delete[] ap;
+
+    return 0;
+}

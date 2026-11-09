@@ -5,53 +5,47 @@
 #include "../util.h"
 
 
-void initConjugateGradient(double *__restrict__ u, double *__restrict__ rhs, const size_t nx, const size_t ny) {
+void initConjugateGradient(double *__restrict__ u, double *__restrict__ rhs, const size_t nx, const size_t ny, bool layoutRight = false) {
     constexpr auto app = 1;
 
     switch (app) {
         case 0:
         // version 0 - zero boundary, unit inner values
-        for (size_t i1 = 0; i1 < ny; ++i1) {
-            for (size_t i0 = 0; i0 < nx; ++i0) {
-                if (0 == i0 || 0 == i1 || nx - 1 == i0 || ny - 1 == i1)
-                    u[i1 * nx + i0] = 0;
-                else
-                    u[i1 * nx + i0] = 1;
+        forEachCell2d(nx, ny, 0, nx, 0, ny, layoutRight, [&](size_t i0, size_t i1, size_t s0, size_t s1) {
+            if (0 == i0 || 0 == i1 || nx - 1 == i0 || ny - 1 == i1)
+                u[i1 * s1 + i0 * s0] = 0;
+            else
+                u[i1 * s1 + i0 * s0] = 1;
 
-                rhs[i1 * nx + i0] = 0;
-            }
-        }
+            rhs[i1 * s1 + i0 * s0] = 0;
+        });
 
         break;
 
         case 1:
         // version 1 - simple trigonometric test problem
-        for (size_t i1 = 0; i1 < ny; ++i1) {
-            for (size_t i0 = 0; i0 < nx; ++i0) {
-                auto x = i0 - 1 + 0.5;
-                auto y = i1 - 1 + 0.5;
+        forEachCell2d(nx, ny, 0, nx, 0, ny, layoutRight, [&](size_t i0, size_t i1, size_t s0, size_t s1) {
+            auto x = i0 - 1 + 0.5;
+            auto y = i1 - 1 + 0.5;
 
-                if (0 == i0 || 0 == i1 || nx - 1 == i0 || ny - 1 == i1)
-                    u[i1 * nx + i0] = sin(1e-3 * x) * cos(2e-3 * y);
-                else
-                    u[i1 * nx + i0] = 1;
-                rhs[i1 * nx + i0] = 5e-6 * sin(1e-3 * x) * cos(2e-3 * y);
-            }
-        }
+            if (0 == i0 || 0 == i1 || nx - 1 == i0 || ny - 1 == i1)
+                u[i1 * s1 + i0 * s0] = sin(1e-3 * x) * cos(2e-3 * y);
+            else
+                u[i1 * s1 + i0 * s0] = 1;
+            rhs[i1 * s1 + i0 * s0] = 5e-6 * sin(1e-3 * x) * cos(2e-3 * y);
+        });
         break;
     }
 }
 
-void checkSolutionConjugateGradient(const double *const __restrict__ u, const double *const __restrict__ rhs, const size_t nx, const size_t ny) {
+void checkSolutionConjugateGradient(const double *const __restrict__ u, const double *const __restrict__ rhs, const size_t nx, const size_t ny, bool layoutRight = false) {
     double res = 0;
-    for (size_t i1 = 1; i1 < ny - 1; ++i1) {
-        for (size_t i0 = 1; i0 < nx - 1; ++i0) {
-            const double localRes = rhs[i1 * nx + i0] - (
-                    4 * u[i1 * nx + i0] - (u[i1 * nx + i0 - 1] + u[i1 * nx + i0 + 1] + u[(i1 - 1) * nx + i0] + u[(i1 + 1) * nx + i0]));
+    forEachCell2d(nx, ny, 1, nx - 1, 1, ny - 1, layoutRight, [&](size_t i0, size_t i1, size_t s0, size_t s1) {
+        const double localRes = rhs[i1 * s1 + i0 * s0] - (
+                4 * u[i1 * s1 + i0 * s0] - (u[i1 * s1 + (i0 - 1) * s0] + u[i1 * s1 + (i0 + 1) * s0] + u[(i1 - 1) * s1 + i0 * s0] + u[(i1 + 1) * s1 + i0 * s0]));
 
-            res += localRes * localRes;
-        }
-    }
+        res += localRes * localRes;
+    });
 
     res = sqrt(res);
 

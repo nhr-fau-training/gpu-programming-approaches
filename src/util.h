@@ -92,3 +92,20 @@ FCT_DECORATOR size_t ceilingDivide(size_t a, size_t b) {
 FCT_DECORATOR size_t ceilToMultipleOf(size_t a, size_t b) {
     return ceilingDivide(a, b) * b;
 }
+
+template <typename Body>
+inline void forEachCell2d(size_t nx, size_t ny, size_t begin0, size_t end0, size_t begin1, size_t end1, bool layoutRight, Body body) {
+    if (layoutRight) {
+        for (size_t i0 = begin0; i0 < end0; ++i0) {
+            for (size_t i1 = begin1; i1 < end1; ++i1) {
+                body(i0, i1, ny, size_t(1));
+            }
+        }
+    } else {
+        for (size_t i1 = begin1; i1 < end1; ++i1) {
+            for (size_t i0 = begin0; i0 < end0; ++i0) {
+                body(i0, i1, size_t(1), nx);
+            }
+        }
+    }
+}
