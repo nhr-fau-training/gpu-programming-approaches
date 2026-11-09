@@ -7,7 +7,9 @@ inline size_t conjugateGradient(const Kokkos::View<double **> &rhs, Kokkos::View
                                 Kokkos::View<double **> &p, Kokkos::View<double **> &ap,
                                 const size_t nx, const size_t ny, const size_t maxIt) {
     // all inner points
-    const auto inner = Kokkos::MDRangePolicy<Kokkos::Rank<2>, Kokkos::Schedule<Kokkos::Static>>({1, 1}, {nx - 1, ny - 1}, {16, 16});
+    // explicit tiles on GPU backends only; 0 selects the default tile size
+    constexpr int64_t tile = std::is_same_v<Kokkos::DefaultExecutionSpace, Kokkos::DefaultHostExecutionSpace> ? 0 : 16;
+    const auto inner = Kokkos::MDRangePolicy<Kokkos::Rank<2>, Kokkos::Schedule<Kokkos::Static>>({1, 1}, {nx - 1, ny - 1}, {tile, tile});
 
     // initialization
     double initResSq = 0;
