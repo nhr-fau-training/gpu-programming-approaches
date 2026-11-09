@@ -17,3 +17,6 @@ build/stencil-2d/*
 !build/stencil-2d/.gitkeep
 build/cg/*
 !build/cg/.gitkeep
+
+build/interop/*
+!build/interop/.gitkeep
