@@ -7,7 +7,7 @@ inline size_t conjugateGradient(const Kokkos::View<double **> &rhs, Kokkos::View
                                 Kokkos::View<double **> &p, Kokkos::View<double **> &ap,
                                 const size_t nx, const size_t ny, const size_t maxIt) {
     // all inner points
-    const auto inner = Kokkos::MDRangePolicy<Kokkos::Rank<2>, Kokkos::Schedule<Kokkos::Static>>({1, 1}, {nx - 1, ny - 1});
+    const auto inner = Kokkos::MDRangePolicy<Kokkos::Rank<2>, Kokkos::Schedule<Kokkos::Static>>({1, 1}, {nx - 1, ny - 1}, {16, 16});
 
     // initialization
     double initResSq = 0;
